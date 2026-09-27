@@ -8,7 +8,7 @@
  * - NEVER accesses private accounts, walled gardens, or bypassing platform restrictions.
  * - Queries only lawful, openly accessible endpoints (GitHub public API, Crossref open index, OpenLibrary).
  * - Distinguishes verified public data from unverified self-declared claims.
- * - Always provides reliable fallback data when public APIs are throttled or offline.
+ * - Always provides reliable an explicit unavailable status when public APIs are throttled or offline.
  */
 
 export type SignalVerificationStatus =
@@ -54,28 +54,12 @@ async function verifyGitHubPublicPresence(handle: string): Promise<LawfulPublicS
     if (res.ok) {
       const data = await res.json();
       return {
-        category: 'code',
-        sourceName: 'GitHub Public Developer Index',
-        sourceType: 'Open Source Catalog',
-        identifier: `@${cleanHandle}`,
-        verificationStatus: 'VERIFIED_PUBLIC_SOURCE',
-        description: `Verified open source contributor with ${data.public_repos ?? 0} public repositories. Account established ${data.created_at ? new Date(data.created_at).getFullYear() : 'previously'}.`,
-        publicUrl: `https://github.com/${cleanHandle}`,
-        verifiedAt: Date.now(),
-      };
-    }
-  } catch (e) {
-    // Network or rate limit fallback
-  }
-
-  // Graceful fallback for rate-limited public calls
-  return {
     category: 'code',
     sourceName: 'GitHub Public Developer Index',
     sourceType: 'Open Source Catalog',
     identifier: `@${cleanHandle}`,
-    verificationStatus: 'PUBLIC_SIGNAL_FALLBACK',
-    description: `Consented public developer handle @${cleanHandle}. Public presence acknowledged through open source taxonomy fallback.`,
+    verificationStatus: 'UNAVAILABLE',
+    description: `Public GitHub source could not be reached or matched. This is not an identity or authenticity verification.`,
     publicUrl: `https://github.com/${cleanHandle}`,
     verifiedAt: Date.now(),
   };
@@ -119,7 +103,7 @@ async function verifyScholarlyOpenIndex(authorOrTopic: string): Promise<LawfulPu
     sourceName: 'Open Scientific Directory',
     sourceType: 'Public Registry',
     identifier: cleanQuery,
-    verificationStatus: 'PUBLIC_SIGNAL_FALLBACK',
+    verificationStatus: 'UNAVAILABLE',
     description: `Scholarly domain interest in "${cleanQuery}" aligned with public science classification taxonomy.`,
     verifiedAt: Date.now(),
   };
@@ -163,7 +147,7 @@ async function verifyBibliographicPresence(authorName: string): Promise<LawfulPu
     sourceName: 'Open Cultural & Bibliographic Registry',
     sourceType: 'Bibliographic Index',
     identifier: cleanAuthor,
-    verificationStatus: 'PUBLIC_SIGNAL_FALLBACK',
+    verificationStatus: 'UNAVAILABLE',
     description: `Consented literature vector aligned with author corpus "${cleanAuthor}".`,
     verifiedAt: Date.now(),
   };

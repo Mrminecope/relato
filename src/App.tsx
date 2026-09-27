@@ -330,10 +330,8 @@ export default function App() {
       return;
     }
 
-    const compat = compatibilityCache[candidate.id] || {
-      compatibilityScore: 84,
-      matchGrade: 'Harmonic',
-    };
+    const compat = compatibilityCache[candidate.id];
+    if (!compat) { alert('Compatibility estimate is still loading. Please try again.'); return; }
 
     const newReq: ConnectionRequest = {
       id: 'req-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),

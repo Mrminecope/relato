@@ -11,7 +11,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  runTransaction
 } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile, PublicUserProfile, UserPreferences, ConnectionRequest, MatchConnection, ChatMessage, SafetyReport, BlockEntry, ModeType } from './types';
@@ -259,7 +258,7 @@ export default function App() {
       // 1. Private full profile in /profiles/{userId}
       await setDoc(doc(db, 'profiles', profileWithMinor.id), profileWithMinor);
 
-      // 2. Public sanitized profile projection in /public_profiles/{userId} (strips private email, includes isMinor)
+      // 2. Public projection contains only approved public fields.
       const publicProjection: PublicUserProfile = {
         id: profileWithMinor.id,
         alias: profileWithMinor.alias,
@@ -276,10 +275,8 @@ export default function App() {
         osintFootprint: profileWithMinor.osintFootprint,
         bio: profileWithMinor.bio,
         lookingFor: profileWithMinor.lookingFor,
-        hasActiveDatingConnection: profileWithMinor.hasActiveDatingConnection,
         createdAt: profileWithMinor.createdAt,
         updatedAt: profileWithMinor.updatedAt,
-        privacy: profileWithMinor.privacy,
       };
       await setDoc(doc(db, 'public_profiles', profileWithMinor.id), publicProjection);
     } catch (err: any) {
@@ -431,113 +428,18 @@ export default function App() {
    * - Updates request status to 'accepted'
    */
   const handleAcceptRequest = async (req: ConnectionRequest) => {
-    if (!userProfile) return;
-
-    const matchId = 'match-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
-    const newMatch: MatchConnection = {
-      id: matchId,
-      requestId: req.id,
-      participantIds: [userProfile.id, req.fromUserId],
-      participants: {
-        [userProfile.id]: {
-          alias: userProfile.alias,
-          avatarSeed: userProfile.avatarSeed,
-          age: userProfile.age,
-          gender: userProfile.gender,
-          mode: req.mode,
-          country: userProfile.country,
-        },
-        [req.fromUserId]: {
-          alias: req.fromUserAlias,
-          avatarSeed: req.fromUserAvatar,
-          age: req.fromUserAge || 24,
-          gender: req.fromUserGender || (userProfile.gender === 'Male' ? 'Female' : 'Male'),
-          mode: req.mode,
-          country: req.fromUserCountry || 'Global',
-        },
-      },
-      type: req.mode,
-      status: 'active',
-      compatibilityScore: req.compatibilityScore,
-      sharedInterests: req.sharedInterests,
-      lastMessageText: 'Mutual connection confirmed. Private channel established.',
-      lastMessageTimestamp: Date.now(),
-      createdAt: Date.now(),
-    };
-
     try {
-      await runTransaction(db, async (transaction) => {
-        // 0. Verify request is still pending
-        const reqDocRef = doc(db, 'requests', req.id);
-        const reqSnap = await transaction.get(reqDocRef);
-        if (!reqSnap.exists() || reqSnap.data()?.status !== 'pending') {
-          throw new Error('This connection request is no longer pending.');
-        }
-
-        // If dating connection, verify neither party has active lock
-        if (req.mode === 'dating') {
-          const myLockRef = doc(db, 'dating_locks', userProfile.id);
-          const partnerLockRef = doc(db, 'dating_locks', req.fromUserId);
-
-          const myLockDoc = await transaction.get(myLockRef);
-          if (myLockDoc.exists() && myLockDoc.data()?.status === 'active') {
-            throw new Error('You already have an active dating connection.');
-          }
-
-          const partnerLockDoc = await transaction.get(partnerLockRef);
-          if (partnerLockDoc.exists() && partnerLockDoc.data()?.status === 'active') {
-            throw new Error('The requester already engaged in another dating connection.');
-          }
-
-          // Write active dating locks for both users
-          transaction.set(myLockRef, {
-            userId: userProfile.id,
-            partnerIds: [req.fromUserId],
-            matchId,
-            status: 'active',
-            createdAt: Date.now(),
-          });
-          transaction.set(partnerLockRef, {
-            userId: req.fromUserId,
-            partnerIds: [userProfile.id],
-            matchId,
-            status: 'active',
-            createdAt: Date.now(),
-          });
-        }
-
-        // 1. Update request status to accepted
-        transaction.update(reqDocRef, {
-          status: 'accepted',
-          updatedAt: Date.now(),
-        });
-
-        // 2. Write match with requestId
-        const matchDocRef = doc(db, 'matches', matchId);
-        transaction.set(matchDocRef, newMatch);
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Authentication session expired. Please sign in again.');
+      const response = await fetch('/api/connections/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ requestId: req.id }),
       });
-
-      // 3. Add initial greeting message in real-time messages subcollection
-      await addDoc(collection(db, 'matches', matchId, 'messages'), {
-        matchId,
-        senderId: userProfile.id,
-        senderAlias: userProfile.alias,
-        text: 'Hello, connection accepted! Glad to connect.',
-        timestamp: Date.now(),
-      });
-
-      // 4. Update local userProfile if dating
-      if (req.mode === 'dating') {
-        const locked: UserProfile = {
-          ...userProfile,
-          hasActiveDatingConnection: true,
-          activeDatingConnectionId: matchId,
-        };
-        await handleSaveProfile(locked);
-      }
+      if (!response.ok) throw new Error(await response.text());
     } catch (err: any) {
-      console.warn('Firestore accept request transaction error:', err);
-      alert('Accept connection failed: ' + (err?.message || 'Transaction error'));
+      console.warn('Accept connection error:', err);
+      alert('Accept connection failed: ' + (err?.message || 'Please retry.'));
     }
   };
 
@@ -573,40 +475,18 @@ export default function App() {
    */
   const handleEndMatch = async (match: MatchConnection) => {
     try {
-      await runTransaction(db, async (transaction) => {
-        const matchRef = doc(db, 'matches', match.id);
-        transaction.update(matchRef, {
-          status: 'ended',
-          endedAt: Date.now(),
-        });
-
-        // Release dating locks
-        if (match.type === 'dating') {
-          for (const uid of match.participantIds) {
-            const lockRef = doc(db, 'dating_locks', uid);
-            transaction.delete(lockRef);
-          }
-        }
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Authentication session expired. Please sign in again.');
+      const response = await fetch('/api/connections/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ matchId: match.id }),
       });
-    } catch (err) {
-      console.warn('End match fallback:', err);
-      await updateDoc(doc(db, 'matches', match.id), {
-        status: 'ended',
-        endedAt: Date.now(),
-      });
-    }
-
-    if (activeChatMatch?.id === match.id) {
-      setActiveChatMatch(null);
-    }
-
-    if (userProfile && match.type === 'dating') {
-      const unlocked: UserProfile = {
-        ...userProfile,
-        hasActiveDatingConnection: false,
-        activeDatingConnectionId: undefined,
-      };
-      await handleSaveProfile(unlocked);
+      if (!response.ok) throw new Error(await response.text());
+      if (activeChatMatch?.id === match.id) setActiveChatMatch(null);
+    } catch (err: any) {
+      console.warn('End match error:', err);
+      alert('Could not end connection: ' + (err?.message || 'Please retry.'));
     }
   };
 

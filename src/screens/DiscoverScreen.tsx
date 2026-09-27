@@ -86,7 +86,8 @@ export function DiscoverScreen({
       }
 
       // 8. Compatibility Score threshold
-      const score = compatibilityMap[candidate.id]?.compatibilityScore ?? 75;
+      const score = compatibilityMap[candidate.id]?.compatibilityScore;
+      if (score === undefined) return false;
       if (preferences.minCompatibilityScore && score < preferences.minCompatibilityScore) {
         return false;
       }
@@ -114,8 +115,8 @@ export function DiscoverScreen({
   const sortedCandidates = useMemo(() => {
     return [...filteredCandidates].sort((a, b) => {
       if (sortBy === 'resonance') {
-        const scoreA = compatibilityMap[a.id]?.compatibilityScore || 75;
-        const scoreB = compatibilityMap[b.id]?.compatibilityScore || 75;
+        const scoreA = compatibilityMap[a.id]?.compatibilityScore ?? -1;
+        const scoreB = compatibilityMap[b.id]?.compatibilityScore ?? -1;
         return scoreB - scoreA;
       }
       if (sortBy === 'age') {
@@ -348,22 +349,8 @@ export function DiscoverScreen({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedCandidates.map((candidate) => {
-            const compat = compatibilityMap[candidate.id] || {
-              compatibilityScore: 82,
-              matchGrade: 'Harmonic',
-              deepAnalysis: 'Complementary intellectual cadence and shared aesthetic appreciation.',
-              sharedAesthetics: ['Thoughtful Living', 'Autonomous Curiosity'],
-              suggestedConversationStarters: [
-                'What recent discovery surprised you?',
-                'Do you prefer solitude or quiet accompaniment when working?'
-              ],
-              osintInsights: {
-                intellectualResonance: 'High synergy across public signals',
-                culturalAffinity: 'Curated taste in modern craft',
-                lifestylePacing: 'Synchronized contemplative rhythm',
-                trustRating: 'Verified authentic vectors'
-              }
-            };
+            const compat = compatibilityMap[candidate.id];
+            if (!compat) return null;
 
             const isPending = sentRequests.some(
               (r) => r.toUserId === candidate.id && r.status === 'pending'

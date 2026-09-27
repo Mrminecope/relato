@@ -11,7 +11,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  runTransaction
 } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile, PublicUserProfile, UserPreferences, ConnectionRequest, MatchConnection, ChatMessage, SafetyReport, BlockEntry, ModeType } from './types';
@@ -28,6 +27,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { SafetyScreen } from './screens/SafetyScreen';
 import { ProfileViewModal } from './screens/ProfileViewModal';
 import { calculateOSINTCompatibility, OSINTAnalysisResult } from './lib/gemini';
+import { sendRelatoGmailNotification, generateConnectionInviteHtml, getCachedOAuthToken, clearOAuthToken } from './lib/gmail';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -343,10 +343,33 @@ export default function App() {
       return;
     }
 
-    const compat = compatibilityCache[candidate.id] || {
-      compatibilityScore: 84,
-      matchGrade: 'Harmonic',
-    };
+    // Check for active dating lock in Firestore /dating_locks before allowing request
+    if (type === 'chat') {
+      try {
+        const myLockSnap = await getDoc(doc(db, 'dating_locks', userProfile.id));
+        if (myLockSnap.exists() && myLockSnap.data()?.status === 'active') {
+          alert('You currently have an active dating connection. On Relato, you must conclude that connection before sending new dating requests.');
+          return;
+        }
+
+        const candidateLockSnap = await getDoc(doc(db, 'dating_locks', candidate.id));
+        if (candidateLockSnap.exists() && candidateLockSnap.data()?.status === 'active') {
+          alert(`${candidate.alias} currently has an active dating connection. On Relato, members can only engage in one dating connection at a time.`);
+          return;
+        }
+      } catch (e) {
+        if (userProfile.hasActiveDatingConnection) {
+          alert('You currently have an active dating connection.');
+          return;
+        }
+      }
+    }
+
+    const compat = compatibilityCache[candidate.id];
+    if (!compat) {
+      alert('Compatibility estimate is still loading. Please try again in a moment.');
+      return;
+    }
 
     const newReq: ConnectionRequest = {
       id: 'req-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),

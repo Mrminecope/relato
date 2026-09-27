@@ -1,18 +1,4 @@
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  query,
-  where,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  runTransaction
-} from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, query, where, onSnapshot, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile, PublicUserProfile, UserPreferences, ConnectionRequest, MatchConnection, ChatMessage, SafetyReport, BlockEntry, ModeType } from './types';
 import { HeaderNav } from './components/HeaderNav';
@@ -28,7 +14,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { SafetyScreen } from './screens/SafetyScreen';
 import { ProfileViewModal } from './screens/ProfileViewModal';
 import { calculateOSINTCompatibility, OSINTAnalysisResult } from './lib/gemini';
-import { sendRelatoGmailNotification, generateConnectionInviteHtml, getCachedOAuthToken, clearOAuthToken } from './lib/gmail';
+import { clearOAuthToken } from './lib/gmail';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -344,32 +330,8 @@ export default function App() {
       return;
     }
 
-    // Check for active dating lock in Firestore /dating_locks before allowing request
-    if (type === 'chat') {
-      try {
-        const myLockSnap = await getDoc(doc(db, 'dating_locks', userProfile.id));
-        if (myLockSnap.exists() && myLockSnap.data()?.status === 'active') {
-          alert('You currently have an active dating connection. On Relato, you must conclude that connection before sending new dating requests.');
-          return;
-        }
-
-        const candidateLockSnap = await getDoc(doc(db, 'dating_locks', candidate.id));
-        if (candidateLockSnap.exists() && candidateLockSnap.data()?.status === 'active') {
-          alert(`${candidate.alias} currently has an active dating connection. On Relato, members can only engage in one dating connection at a time.`);
-          return;
-        }
-      } catch (e) {
-        if (userProfile.hasActiveDatingConnection) {
-          alert('You currently have an active dating connection.');
-          return;
-        }
-      }
-    }
-
-    const compat = compatibilityCache[candidate.id] || {
-      compatibilityScore: 84,
-      matchGrade: 'Harmonic',
-    };
+    const compat = compatibilityCache[candidate.id];
+    if (!compat) { alert('Compatibility estimate is still loading. Please try again.'); return; }
 
     const newReq: ConnectionRequest = {
       id: 'req-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -400,26 +362,6 @@ export default function App() {
       return;
     }
 
-    // Gmail notification dispatch using in-memory OAuth token
-    // Dispatches confirmation exclusively to the authorized user's account; recipient emails are strictly private
-    if (userProfile.privacy.notifyViaGmail && userProfile.email) {
-      const token = getCachedOAuthToken();
-      if (token) {
-        const emailHtml = generateConnectionInviteHtml(
-          userProfile.alias,
-          candidate.alias,
-          newReq.mode,
-          compat.compatibilityScore,
-          newReq.sharedInterests
-        );
-        sendRelatoGmailNotification(
-          token,
-          userProfile.email,
-          `Relato: Outbound ${newReq.mode === 'dating' ? 'Dating' : 'Friendship'} Request to ${candidate.alias}`,
-          emailHtml
-        );
-      }
-    }
   };
 
   /**

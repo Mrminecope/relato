@@ -28,7 +28,6 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { SafetyScreen } from './screens/SafetyScreen';
 import { ProfileViewModal } from './screens/ProfileViewModal';
 import { calculateOSINTCompatibility, OSINTAnalysisResult } from './lib/gemini';
-import { clearOAuthToken } from './lib/gmail';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {

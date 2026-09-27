@@ -110,7 +110,7 @@ export function DiscoveryCard({
               {candidate.alias}
             </h3>
             {candidate.osintFootprint?.verifiedPublicSignals && (
-              <span title="Verified public cryptographic or academic signals">
+              <span title="Public-source status">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               </span>
             )}

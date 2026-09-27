@@ -98,7 +98,7 @@ export function ProfileViewModal({
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-serif text-[#2B2B2B]">{candidate.alias}</h2>
               {candidate.osintFootprint?.verifiedPublicSignals && (
-                <span title="Verified Public Signals">
+                <span title="Public-source status">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 </span>
               )}
@@ -181,7 +181,7 @@ export function ProfileViewModal({
                 <span className="text-[#3B352F]">{compatibility.osintInsights.lifestylePacing}</span>
               </div>
               <div>
-                <span className="font-mono text-[#8C8379] block">Public Signal Trust:</span>
+                <span className="font-mono text-[#8C8379] block">Public Source Status:</span>
                 <span className="text-[#3B352F]">{compatibility.osintInsights.trustRating}</span>
               </div>
             </div>
@@ -196,7 +196,7 @@ export function ProfileViewModal({
               <span>Public Consented OSINT Vectors</span>
             </div>
             <span className="text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-              Lawful Public Registry Verified
+              Lawful Public Registry Status
             </span>
           </div>
 
@@ -239,7 +239,7 @@ export function ProfileViewModal({
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="font-mono text-[11px] text-[#2B2B2B]">Public Repository:</span>
-                    <span className="text-[9px] font-mono bg-emerald-50 text-emerald-800 px-1 rounded border border-emerald-200">Verified Public</span>
+                    <span className="text-[9px] font-mono bg-emerald-50 text-emerald-800 px-1 rounded border border-emerald-200">Public Source Match</span>
                   </div>
                   <span className="font-mono text-xs text-[#444]">@{candidate.osintFootprint.publicGithub}</span>
                 </div>

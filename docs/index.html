@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Relato — privacy-first social discovery built around consent, safety, and public-source context.">
+  <meta name="theme-color" content="#FAF8F5">
+  <title>Relato — Privacy-first social discovery</title>
+  <style>
+    :root{
+      --paper:#FAF8F5;--surface:#FFFFFF;--ink:#2B2B2B;--muted:#756D65;--line:#E8E1D8;
+      --soft:#F2EDE7;--accent:#C68B7D;--dark:#171717;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    a{color:inherit}
+    .wrap{width:min(1120px,calc(100% - 40px));margin:auto}
+    nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0}
+    .brand{font-family:Georgia,serif;font-size:25px;letter-spacing:-.04em}
+    nav .links{display:flex;gap:22px;font-size:13px;color:var(--muted)}
+    nav a{text-decoration:none}
+    .hero{padding:76px 0 90px}
+    .eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 13px;font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .eyebrow span{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    h1{font:500 clamp(52px,8vw,92px)/.93 Georgia,serif;letter-spacing:-.065em;max-width:900px;margin:24px 0}
+    .lead{font:400 19px/1.7 Georgia,serif;color:#514A44;max-width:710px;margin:0}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:650;border:1px solid var(--line)}
+    .btn.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+    .btn.secondary{background:var(--surface)}
+    section{padding:82px 0;border-top:1px solid var(--line)}
+    .section-head{max-width:690px;margin-bottom:34px}
+    .section-head h2{font:500 39px/1.05 Georgia,serif;letter-spacing:-.045em;margin:0 0 13px}
+    .section-head p{font-size:15px;line-height:1.7;color:var(--muted);margin:0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;min-height:220px}
+    .num{font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    .card h3{font:600 18px/1.25 Georgia,serif;margin:28px 0 10px}
+    .card p{font-size:13px;line-height:1.7;color:#5F5750;margin:0}
+    .band{background:var(--soft);border:1px solid var(--line);border-radius:28px;padding:34px}
+    .band strong{font-family:Georgia,serif;font-size:24px;font-weight:500}
+    .band p{color:#625A53;line-height:1.7;font-size:14px;max-width:790px}
+    .list{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .item{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:17px}
+    .item b{display:block;font-size:13px;margin-bottom:6px}
+    .item span{font-size:12px;line-height:1.6;color:var(--muted)}
+    footer{padding:34px 0 50px;color:var(--muted);font-size:12px}
+    footer .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.list{grid-template-columns:1fr}.hero{padding-top:50px}nav .links{display:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#">relato</a>
+      <div class="links">
+        <a href="#principles">Principles</a>
+        <a href="#safety">Safety</a>
+        <a href="https://github.com/Mrminecope/relato">GitHub</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero" style="border-top:0">
+        <span class="eyebrow"><span></span>privacy-first social discovery</span>
+        <h1>Find resonance.<br>Keep your boundaries.</h1>
+        <p class="lead">Relato explores thoughtful connections through declared interests and explicitly consented public-source context — with safety and privacy treated as product requirements.</p>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/Mrminecope/relato">View on GitHub ↗</a>
+          <a class="btn secondary" href="#principles">Explore the principles ↓</a>
+        </div>
+      </section>
+
+      <section id="principles">
+        <div class="section-head">
+          <h2>Designed around consent.</h2>
+          <p>The product direction is intentionally simple: public discovery should not mean public exposure, and AI-assisted context should never be presented as identity proof.</p>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <div class="num">01 / CONSENT</div>
+            <h3>Explicit public-source context</h3>
+            <p>OSINT is limited to lawful public sources and user-consented identities or handles. Private accounts, bypasses, and silent identification are outside the product boundary.</p>
+          </article>
+          <article class="card">
+            <div class="num">02 / PRIVACY</div>
+            <h3>Public projection, private profile</h3>
+            <p>Discovery is intended to expose only approved public fields. Email addresses, privacy controls, and connection-lock state stay private.</p>
+          </article>
+          <article class="card">
+            <div class="num">03 / AI</div>
+            <h3>Compatibility is an estimate</h3>
+            <p>Gemini-assisted analysis can describe affinity and conversation context, but it is not identity, authenticity, or trust verification.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="safety">
+        <div class="section-head">
+          <h2>Safety is enforced at the data layer.</h2>
+          <p>Relato’s security architecture separates client experience from trusted lifecycle operations so sensitive invariants do not depend on React alone.</p>
+        </div>
+        <div class="list">
+          <div class="item"><b>Age separation</b><span>16–17 is friendship-only; dating requires both participants to be 18+; adult/minor connections are rejected.</span></div>
+          <div class="item"><b>Dating exclusivity</b><span>The one-active-dating-connection rule is designed to be enforced atomically when a request becomes a match.</span></div>
+          <div class="item"><b>Mutual acceptance</b><span>Requests are accepted or declined by the recipient, cancelled by the sender, and chat access is restricted to active match participants.</span></div>
+          <div class="item"><b>External email</b><span>Gmail communication is opt-in. Minors remain inside Relato and personal email addresses are not exposed through discovery.</span></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="band">
+          <strong>Built for calm discovery, not surveillance.</strong>
+          <p>Relato keeps OSINT as a core capability while applying a clear boundary: lawful public information, explicit consent, transparent provenance, and no claims that an AI score proves who somebody is.</p>
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/Mrminecope/relato/blob/main/README.md">Read the README ↗</a>
+            <a class="btn secondary" href="https://github.com/Mrminecope/relato/blob/main/LICENSE">License ↗</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot">
+        <span>© 2026 Mrminecope · Relato</span>
+        <span>Open-source project · GitHub Pages</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -11,10 +11,10 @@
  * - Always provides reliable fallback data when public APIs are throttled or offline.
  */
 
-export type SignalVerificationStatus = 
-  | 'VERIFIED_PUBLIC_SOURCE' 
-  | 'SELF_DECLARED_UNVERIFIED' 
-  | 'PUBLIC_SIGNAL_FALLBACK';
+export type SignalVerificationStatus =
+  | 'VERIFIED_PUBLIC_SOURCE'
+  | 'SELF_DECLARED_UNVERIFIED'
+  | 'UNAVAILABLE';
 
 export interface LawfulPublicSignal {
   category: 'code' | 'scholar' | 'literature' | 'music' | 'open_web';
@@ -28,7 +28,6 @@ export interface LawfulPublicSignal {
 }
 
 export interface PublicVerificationReport {
-  overallTrustScore: number; // 0 - 100
   signalsFound: LawfulPublicSignal[];
   verifiedSignals: LawfulPublicSignal[];
   unverifiedSignals: LawfulPublicSignal[];
@@ -207,22 +206,16 @@ export async function verifyConsentedPublicFootprint(
   const verifiedSignals = signals.filter(
     (s) => s.verificationStatus === 'VERIFIED_PUBLIC_SOURCE'
   );
-  const unverifiedSignals = signals.filter(
-    (s) => s.verificationStatus !== 'VERIFIED_PUBLIC_SOURCE'
-  );
+  const unverifiedSignals = signals.filter((s) => s.verificationStatus !== 'VERIFIED_PUBLIC_SOURCE');
 
-  // Trust score formulation: Base + verified multiplier + signal presence
-  let trustScore = 70;
-  trustScore += verifiedSignals.length * 10;
-  trustScore += unverifiedSignals.length * 4;
-  trustScore = Math.min(98, Math.max(65, trustScore));
+  const unavailableSignals = signals.filter((s) => s.verificationStatus === 'UNAVAILABLE');
+  const selfDeclaredSignals = signals.filter((s) => s.verificationStatus === 'SELF_DECLARED_UNVERIFIED');
 
   return {
-    overallTrustScore: trustScore,
     signalsFound: signals,
     verifiedSignals,
     unverifiedSignals,
-    summaryNote: `Public profile vectors verified against open repositories and published indices without private data extraction.`,
+    summaryNote: `Only explicitly consented public-source signals are evaluated. Each signal is labeled as verified public source, self-declared, or unavailable.`,
     complianceNotice: `Relato only evaluates publicly accessible registries and consented identifiers. Private accounts and closed platforms are never accessed.`,
   };
 }

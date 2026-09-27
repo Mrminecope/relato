@@ -213,7 +213,7 @@ export function SafetyScreen({
               <div>
                 <div className="text-xs font-medium text-[#2B2B2B]">Google Workspace OAuth Authentication</div>
                 <div className="text-[11px] text-[#787067]">
-                  Authorize your Gmail account to send and receive verified notifications
+                  Authorize your Gmail account through secure server-side OAuth
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export function SafetyScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={handleTestGmailNotification}
+                  onClick={handleAuthorizeGoogleAccount}
                   className="text-xs font-medium text-white bg-[#2B2B2B] hover:bg-[#1A1A1A] px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
                 >
                   Send Test Digest

@@ -1,4 +1,5 @@
 import { UserProfile } from '../types';
+import { auth } from './firebase';
 
 export interface OSINTAnalysisResult {
   compatibilityScore: number;
@@ -15,7 +16,9 @@ export interface OSINTAnalysisResult {
 }
 
 async function post(path: string, body: unknown) {
-  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('Authentication session expired. Please sign in again.');
+  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify(body) });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }

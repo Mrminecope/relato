@@ -15,7 +15,7 @@ import {
   Trash2,
   ExternalLink
 } from 'lucide-react';
-import { sendRelatoGmailNotification, authorizeWithGoogleWorkspace, getCachedOAuthToken } from '../lib/gmail';
+import { authorizeWithGoogleWorkspace } from '../lib/gmail';
 
 interface SafetyScreenProps {
   currentUser: UserProfile;
@@ -24,9 +24,7 @@ interface SafetyScreenProps {
   reports: SafetyReport[];
   onUnblockUser: (blockId: string) => void;
   onSubmitReport: (reportedUserId: string, alias: string, category: any, reason: string) => void;
-  userAccessToken?: string;
-  onAuthorizeGmail?: () => void;
-}
+  }
 
 export function SafetyScreen({
   currentUser,
@@ -35,7 +33,6 @@ export function SafetyScreen({
   reports,
   onUnblockUser,
   onSubmitReport,
-  userAccessToken,
 }: SafetyScreenProps) {
   const [privacy, setPrivacy] = useState(currentUser.privacy);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -71,53 +68,13 @@ export function SafetyScreen({
 
   const handleAuthorizeGoogleAccount = async () => {
     setIsAuthorizing(true);
-    setTestEmailStatus('Requesting Google Workspace OAuth authorization for Gmail...');
+    setTestEmailStatus('Requesting secure Google Workspace Gmail authorization...');
     try {
-      const { accessToken } = await authorizeWithGoogleWorkspace();
-      if (accessToken) {
-        setTestEmailStatus('Google Workspace account authorized with Gmail sending permissions!');
-      } else {
-        setTestEmailStatus('Authorization succeeded with user credentials.');
-      }
+      const { authorizationUrl } = await authorizeWithGoogleWorkspace();
+      window.location.assign(authorizationUrl);
     } catch (err: any) {
-      setTestEmailStatus(`OAuth Error: ${err?.message || 'Could not complete authorization'}`);
-    } finally {
+      setTestEmailStatus(`OAuth Error: ${err?.message || 'Could not start authorization'}`);
       setIsAuthorizing(false);
-    }
-  };
-
-  const handleTestGmailNotification = async () => {
-    if (!currentUser.email) {
-      setTestEmailStatus('Please ensure an email address is associated with your account.');
-      return;
-    }
-
-    const token = userAccessToken || getCachedOAuthToken();
-    if (!token) {
-      setTestEmailStatus('No active Google OAuth token found. Click "Authorize Google Workspace Account" above first.');
-      return;
-    }
-
-    setTestEmailStatus('Dispatching verified test digest via Google Workspace Gmail API...');
-    const result = await sendRelatoGmailNotification(
-      token,
-      currentUser.email,
-      'Relato • Mutual Consent Security Confirmation',
-      `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:24px;background:#FAF8F5;border:1px solid #EBE5DF;border-radius:14px;color:#2B2B2B;">
-        <h2 style="font-weight:600;margin-top:0;">Relato Safety Confirmation</h2>
-        <p style="font-size:14px;line-height:1.6;color:#554E46;">This is an authorized confirmation confirming your Google Workspace Gmail account is securely linked to Relato.</p>
-        <div style="background:#F2EDE7;padding:12px 16px;border-radius:8px;font-size:13px;margin:16px 0;">
-          <strong>Anonymous Profile:</strong> ${currentUser.alias} (${currentUser.gender}, ${currentUser.age} yrs)<br>
-          <strong>Status:</strong> Reciprocal acceptance enforcement active
-        </div>
-        <p style="font-size:12px;color:#8A8177;">You will receive real-time notifications whenever another member requests or accepts a connection.</p>
-      </div>`
-    );
-
-    if (result.success) {
-      setTestEmailStatus(`Email successfully sent to ${currentUser.email} via Gmail REST API!`);
-    } else {
-      setTestEmailStatus(`Gmail notification error: ${result.error || 'Failed to dispatch'}`);
     }
   };
 

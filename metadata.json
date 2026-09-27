@@ -1,0 +1,6 @@
+{
+  "name": "Relato — Meaningful Connections & OSINT Discovery",
+  "description": "Discover compatible friends and partners through private, OSINT-inspired discovery, mutual consent messaging, and Gemini AI compatibility analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

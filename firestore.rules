@@ -1,0 +1,187 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isRequesterMinor() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.age < 18;
+    }
+
+    // Profiles collection (Strictly private full profile; ONLY owner can read or write)
+    // Other users are strictly forbidden from reading this document, protecting private email and settings.
+    match /profiles/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.age >= 16
+        && (request.resource.data.age >= 18 || request.resource.data.activeMode == 'friendship')
+        && (request.resource.data.gender == 'Male' || request.resource.data.gender == 'Female');
+      allow update: if isOwner(userId)
+        && request.resource.data.age >= 16
+        && (request.resource.data.age >= 18 || request.resource.data.activeMode == 'friendship')
+        && (request.resource.data.gender == 'Male' || request.resource.data.gender == 'Female');
+      allow delete: if isOwner(userId);
+    }
+
+    // Public Profiles projection (Sanitized public fields only)
+    // Restricts discovery so minors (16-17) can ONLY discover minors in friendship mode,
+    // and adults (18+) can ONLY discover adults, completely preventing adult/minor connections.
+    // Server-side validation strictly bars private email from ever existing in public records.
+    match /public_profiles/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (isRequesterMinor() && resource.data.isMinor == true && resource.data.activeMode == 'friendship') ||
+        (!isRequesterMinor() && resource.data.isMinor == false)
+      );
+      allow create: if isOwner(userId)
+        && request.resource.data.age >= 16
+        && (request.resource.data.age >= 18 || request.resource.data.activeMode == 'friendship')
+        && (request.resource.data.gender == 'Male' || request.resource.data.gender == 'Female')
+        && request.resource.data.isMinor == (request.resource.data.age < 18)
+        && !('email' in request.resource.data)
+        && !('privateEmail' in request.resource.data);
+      allow update: if isOwner(userId)
+        && request.resource.data.age >= 16
+        && (request.resource.data.age >= 18 || request.resource.data.activeMode == 'friendship')
+        && (request.resource.data.gender == 'Male' || request.resource.data.gender == 'Female')
+        && request.resource.data.isMinor == (request.resource.data.age < 18)
+        && !('email' in request.resource.data)
+        && !('privateEmail' in request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // Preferences collection (Strictly owner access)
+    match /preferences/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // Active Dating Locks collection (Atomic single dating partner enforcement)
+    match /dating_locks/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        (request.auth.uid == userId || request.auth.uid in request.resource.data.partnerIds) &&
+        request.resource.data.status == 'active' &&
+        get(/databases/$(database)/documents/profiles/$(userId)).data.age >= 18
+      );
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId || request.auth.uid in resource.data.partnerIds) &&
+        request.resource.data.status in ['active', 'ended']
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.uid in resource.data.partnerIds
+      );
+    }
+
+    // Requests collection (Connection requests for friendship or dating)
+    // Strictly enforces:
+    // - Authenticated sender, cannot forge fromUserId or request self
+    // - Cannot forge sender age (must match sender profile age)
+    // - Strict age boundaries: 16-17 minors can ONLY request 16-17 minors in friendship mode
+    // - Adults (18+) can ONLY request adults (18+)
+    // - Adult/minor connections are strictly denied on the backend
+    // - Dating mode ('chat') strictly requires both sender and recipient to be 18+
+    match /requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isAuthenticated()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.fromUserAge == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.age
+        && (
+          (
+            request.resource.data.fromUserAge < 18 &&
+            get(/databases/$(database)/documents/profiles/$(request.resource.data.toUserId)).data.age < 18 &&
+            request.resource.data.type == 'friend' &&
+            request.resource.data.mode == 'friendship'
+          ) ||
+          (
+            request.resource.data.fromUserAge >= 18 &&
+            get(/databases/$(database)/documents/profiles/$(request.resource.data.toUserId)).data.age >= 18 &&
+            (
+              (request.resource.data.type == 'friend' && request.resource.data.mode == 'friendship') ||
+              (request.resource.data.type == 'chat' && request.resource.data.mode == 'dating')
+            )
+          )
+        );
+      allow update: if isAuthenticated() && (
+        // Recipient can accept or decline, but cannot tamper with participants or mode
+        (
+          resource.data.toUserId == request.auth.uid &&
+          request.resource.data.status in ['accepted', 'declined'] &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId &&
+          request.resource.data.mode == resource.data.mode &&
+          request.resource.data.type == resource.data.type
+        ) ||
+        // Sender can cancel
+        (
+          resource.data.fromUserId == request.auth.uid &&
+          request.resource.data.status == 'cancelled' &&
+          request.resource.data.fromUserId == resource.data.fromUserId &&
+          request.resource.data.toUserId == resource.data.toUserId
+        )
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+    }
+
+    // Matches collection (Strictly mutual participants access)
+    // Matches can ONLY be created after a valid accepted request!
+    match /matches/{matchId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participantIds
+      );
+      allow create: if isAuthenticated() &&
+        request.auth.uid in request.resource.data.participantIds &&
+        request.resource.data.participantIds.size() == 2 &&
+        'requestId' in request.resource.data &&
+        get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.status == 'accepted' &&
+        get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.toUserId == request.auth.uid &&
+        get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.fromUserId in request.resource.data.participantIds;
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.participantIds &&
+        request.resource.data.participantIds == resource.data.participantIds
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid in resource.data.participantIds
+      );
+
+      // Real-time messages subcollection
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.participantIds
+        );
+        allow create: if isAuthenticated() &&
+          request.resource.data.senderId == request.auth.uid &&
+          (request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.participantIds);
+        allow update, delete: if false; // Immutable messages
+      }
+    }
+
+    // Safety Reports collection (Private audit records)
+    match /reports/{reportId} {
+      allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid;
+      allow read: if isAuthenticated() && resource.data.reporterId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Blocks collection
+    match /blocks/{blockId} {
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+  }
+}

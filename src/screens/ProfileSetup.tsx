@@ -53,7 +53,7 @@ export function ProfileSetup({ userId, userEmail, initialProfile, onComplete }: 
 
   // EXPLICIT OSINT CONSENT
   const [osintConsent, setOsintConsent] = useState(
-    initialProfile?.osintFootprint?.consentGranted ?? true
+    initialProfile?.osintFootprint?.consentGranted ?? false
   );
 
   const [generatingOSINT, setGeneratingOSINT] = useState(false);
@@ -100,7 +100,7 @@ export function ProfileSetup({ userId, userEmail, initialProfile, onComplete }: 
 
     const booksList = favoriteBooks.split(',').map((s) => s.trim()).filter(Boolean);
 
-    let verifiedSignals: string[] = ['Consented Public Signal'];
+    let verifiedSignals: string[] = [];
 
     if (osintConsent) {
       // Verify lawful public footprint using OSINT module
@@ -112,7 +112,7 @@ export function ProfileSetup({ userId, userEmail, initialProfile, onComplete }: 
       );
       verifiedSignals = osintReport.signalsFound.map((s) => `${s.sourceName} (${s.verificationStatus})`);
       if (verifiedSignals.length === 0) {
-        verifiedSignals.push('Consented Public Vector');
+        verifiedSignals.push('No verified public-source signal available');
       }
 
       // Synthesize public footprint with Gemini if needed
@@ -125,7 +125,7 @@ export function ProfileSetup({ userId, userEmail, initialProfile, onComplete }: 
         );
       }
     } else {
-      osintSummary = 'User chosen minimal footprint. Private verified member.';
+      osintSummary = 'No public-source OSINT evaluation requested.';
     }
 
     const newProfile: UserProfile = {
